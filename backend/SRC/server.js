@@ -7,25 +7,29 @@ import dotenv from "dotenv";
 import notesRoutes from "./routes/notesRoutes.js";
 import { connectDB } from "./config/db.js";
 import rateLimiter from "./middleware/rateLimiter.js";
+import path from "path";
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5001;
+const __dirname = path.resolve(); // Get the current directory name
 
 //middlewares
-app.use(
-  cors({
-    origin: "http://localhost:5173", // replace with your frontend URL
-  })
-);
+if (process.env.NODE_ENV !== "production") {
+  app.use(
+    cors({
+      origin: "http://localhost:5173", // replace with your frontend URL
+    })
+  );
+}
 app.use(express.json()); //this middle ware will parse the request body as json
 app.use(rateLimiter);
-app.use(
-  cors({
-    origin: "http://localhost:5173", // replace with your frontend URL
-  })
-); //this middleware will allow cross-origin requests, so that our frontend can access the backend API
+// app.use(
+//   cors({
+//     origin: "http://localhost:5173", // replace with your frontend URL
+//   })
+// ); //this middleware will allow cross-origin requests, so that our frontend can access the backend API
 //our simple custom middleware
 
 // app.use((req, res, next) => {
@@ -34,6 +38,13 @@ app.use(
 // });
 
 app.use("/api/notes", notesRoutes);
+
+if (process.env.NODE_ENV === "production") {
+  app.use(express.static(path.join(__dirname, "../frontend/dist"))); // Serve static files from the public directory
+  app.get("*", (req, res) => {
+    res.sendFile(path.join(__dirname, "../frontend", "dist", "index.html"));
+  }); // Serve index.html for all other routes
+}
 
 connectDB().then(() => {
   app.listen(PORT, () => {
